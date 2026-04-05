@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Diyet Planı</title>
+    <style>
+        @page {
+            size: a4 portrait;
+            margin: 1.5cm;
+
+            @frame footer {
+                -pdf-frame-content: footer_content;
+                bottom: 1cm;
+                margin-left: 1.5cm;
+                margin-right: 1.5cm;
+                height: 1cm;
+            }
+        }
+
+        /* FONT TANIMLAMASI (Bellek Üzerinden - Windows Safe) */
+        body {
+            font-family: 'DejaVuSans', sans-serif;
+            -pdf-font-name: 'DejaVuSans';
+            font-size: 11pt;
+            color: #1f2937;
+            line-height: 1.5;
+        }
+
+        h1, h2, h3, b, strong, th, .meal-title {
+            font-family: 'DejaVuSans', sans-serif;
+            -pdf-font-name: 'DejaVuSans-Bold';
+            font-weight: bold;
+        }
+
+        .turkish-debug {
+            background-color: #fce7f3;
+            color: #be185d;
+            padding: 10px;
+            border: 1px solid #f9a8d4;
+            margin-bottom: 20px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #059669;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #059669;
+            font-size: 24pt;
+            margin: 0;
+            -pdf-font-name: 'DejaVuSans-Bold';
+            font-weight: bold;
+        }
+
+        .header h3 {
+            color: #10b981;
+            font-size: 12pt;
+            margin-top: 5px;
+            -pdf-font-name: 'DejaVuSans';
+            font-weight: normal;
+        }
+
+        .info-section {
+            display: table;
+            width: 100%;
+            margin-bottom: 30px;
+            background-color: #f0fdf4;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .info-box {
+            display: table-cell;
+            width: 50%;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #065f46;
+        }
+
+        h2.meal-title {
+            color: #059669;
+            border-left: 5px solid #059669;
+            padding-left: 10px;
+            margin-top: 30px;
+            font-size: 16pt;
+            -pdf-font-name: 'DejaVuSans-Bold';
+            font-weight: bold;
+        }
+
+        .meal-notes {
+            background-color: #fffbeb;
+            border-left: 4px solid #fbbf24;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-style: italic;
+            color: #92400e;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th {
+            background-color: #059669;
+            color: white;
+            text-align: left;
+            padding: 10px;
+            font-weight: bold;
+            font-family: 'DejaVuSans';
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .totals-widget {
+            margin-top: 40px;
+            padding: 20px;
+            background-color: #ecfdf5;
+            border: 2px solid #10b981;
+            border-radius: 12px;
+        }
+
+        .totals-widget h2 {
+            margin: 0 0 15px 0;
+            color: #065f46;
+            text-align: center;
+            -pdf-font-name: 'DejaVuSans-Bold';
+            font-weight: bold;
+        }
+
+        .totals-grid {
+            display: table;
+            width: 100%;
+        }
+
+        .total-item {
+            display: table-cell;
+            width: 25%;
+            text-align: center;
+        }
+
+        .total-value {
+            display: block;
+            font-size: 14pt;
+            font-weight: bold;
+            color: #059669;
+        }
+
+        .total-label {
+            font-size: 9pt;
+            color: #6b7280;
+        }
+
+        #footer_content {
+            text-align: center;
+            color: #9ca3af;
+            font-size: 9pt;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="turkish-debug">
+        {{ turkish_test }}
+    </div>
+
+    <div class="header">
+        <h1>UZMAN DİYET PROGRAMI</h1>
+        <h3>Sağlıklı Bir Yaşam İçin Kişiye Özel Yol Haritası</h3>
+        <h2 style="color: #374151; margin-top: 10px;">Diyetisyen Aylin Balkan</h2>
+    </div>
+
+    <div class="info-section">
+        <div class="info-box">
+            <span class="info-label">Danışan Adı:</span> {{ diet_plan.patient_name }}
+        </div>
+        <div class="info-box" style="text-align: right;">
+            <span class="info-label">Tarih:</span> {{ diet_plan.created_at|date:"d.m.Y" }}
+        </div>
+    </div>
+
+    {% for m_data in context_meals %}
+    <h2 class="meal-title">{{ m_data.meal.get_meal_type_display }}</h2>
+    {% if m_data.meal.notes %}
+    <div class="meal-notes">
+        <strong>Önemli Not:</strong> {{ m_data.meal.notes }}
+    </div>
+    {% endif %}
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 50%;">Besin / Seçenek</th>
+                <th style="width: 25%;">Miktar</th>
+                <th style="width: 25%;">Enerji (kcal)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for f_data in m_data.food_list %}
+            <tr>
+                <td><strong>{{ f_data.food.name }}</strong></td>
+                <td>{{ f_data.amount|floatformat:1 }} {{ f_data.food.unit|default:"Porsiyon" }}</td>
+                <td>{{ f_data.calories|floatformat:0 }} kcal</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endfor %}
+
+    <div class="totals-widget">
+        <h2>GÜNLÜK TOPLAM HEDEFLER</h2>
+        <div class="totals-grid">
+            <div class="total-item">
+                <span class="total-value">{{ total_calories }}</span>
+                <span class="total-label">Kalori (kcal)</span>
+            </div>
+            <div class="total-item">
+                <span class="total-value">{{ total_carbs }}g</span>
+                <span class="total-label">Karbonhidrat</span>
+            </div>
+            <div class="total-item">
+                <span class="total-value">{{ total_protein }}g</span>
+                <span class="total-label">Protein</span>
+            </div>
+            <div class="total-item">
+                <span class="total-value">{{ total_fat }}g</span>
+                <span class="total-label">Yağ</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="footer_content">
+        Diyetisyen Aylin Balkan - Sağlıklı Yaşam Merkezi - Tüm Hakları Saklıdır
+    </div>
+</body>
+
+</html>
