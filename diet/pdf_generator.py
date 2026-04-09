@@ -147,27 +147,18 @@ class DietPDFGenerator:
     def _safe_image(self, image_field, width=3*cm, max_h=None):
         if not image_field: return None
         
-        # Olası dosya yollarını kontrol et (Absolute path ve Storage path)
-        path = None
         try:
-            if hasattr(image_field, 'path') and os.path.exists(image_field.path):
-                path = image_field.path
-            elif hasattr(image_field, 'name'):
-                # Storage üzerinden tam yolu bulmaya çalış (Render Media Storage için)
-                from django.core.files.storage import default_storage
-                if default_storage.exists(image_field.name):
-                    # Local path dönerse kullan, yoksa direkt ismi kullanmayı dene
-                    try:
-                        path = default_storage.path(image_field.name)
-                    except NotImplementedError:
-                        # Bazı storage'lar (S3 vb) .path desteklemez, ama biz local dosya arıyoruz
-                        pass
-        except: pass
+            # Storage türü fark etmeksizin dosyayı belleğe okuyup ReportLab'e veriyoruz
+            from io import BytesIO
+            if hasattr(image_field, 'read'):
+                img_data = BytesIO(image_field.read())
+            elif isinstance(image_field, str) and os.path.exists(image_field):
+                with open(image_field, 'rb') as f:
+                    img_data = BytesIO(f.read())
+            else:
+                return None
 
-        if not path or not os.path.exists(path): return None
-        
-        try:
-            img = Image(path)
+            img = Image(img_data)
             aspect = img.imageHeight / img.imageWidth
             img.drawWidth = width
             img.drawHeight = width * aspect
@@ -175,7 +166,8 @@ class DietPDFGenerator:
                 ratio = max_h / img.drawHeight
                 img.drawHeight, img.drawWidth = max_h, img.drawWidth * ratio
             return img
-        except: return None
+        except: 
+            return None
 
     def _draw_background(self, canvas, doc):
         canvas.saveState()
@@ -214,19 +206,20 @@ class DietPDFGenerator:
         f_reg = "DejaVu" if not getattr(self, "use_fallback_fonts", False) else "Helvetica"
         f_bold = "DejaVu-Bold" if not getattr(self, "use_fallback_fonts", False) else "Helvetica-Bold"
 
-        img = self._safe_image(r.image if r.image else None, width=6.5*cm, max_h=5*cm) or Paragraph("📷", self.styles['Card_Title'])
+        # Eğer resim bulunamazsa sadece boşluk bırak (Emoji vb font bozucuları kaldırıldı)
+        img = self._safe_image(r.image if r.image else None, width=6.5*cm, max_h=5*cm) or Spacer(1, 5*cm)
         
-        # Hazırlanış metnini temizle ve maddelere böl
-        instrs = []
-        raw_instrs = (r.instructions or "").replace('\r', '').split('\n')
-        for line in raw_instrs:
-            clean_line = line.strip()
-            if clean_line:
-                # Eğer satır zaten bir sayı ile başlıyorsa (örn: "1. Şunu yap") onu temizle veya düzenle
-                import re
-                clean_line = re.sub(r'^\d+[\.\)]\s*', '', clean_line)
-                if clean_line:
-                    instrs.append(Paragraph(clean_line, self.styles['Instruction_Text'], bulletText="•"))
+        # Hazırlanış metnini temizle (Emojileri kaldır) ve maddelere böl
+        import re
+        raw_instrs = r.instructions or ""
+        # Türkçe karakterler ve noktalama dışındaki tüm sembolleri (emojiler dahil) temizle
+        clean_text = re.sub(r'[^\w\s.,;:!?()\-+*/ÇÖŞİĞÜçöşiğü]', '', raw_instrs)
+        
+        # Orijinaldeki gibi . (nokta) ile split yapıyoruz, çünkü eski veriler böyleydi.
+        instrs = [
+            Paragraph(line.strip(), self.styles['Instruction_Text'], bulletText="•") 
+            for line in clean_text.split(".") if line.strip()
+        ]
         
         ingredients_list = []
         for ing in r.ingredients.all():
