@@ -477,7 +477,7 @@ class DietPDFGenerator:
                                 )
                                 a_ref_info = f" [{solved_a}]"
                                 
-                            alt_names.append(f"{obj.name}{a_ref_info} ({a_qty} {a_unit})")
+                            alt_names.append(f"{obj.name}{a_ref_info}")
                     if alt_names:
                         alt_text = f"<br/><br/><font color='#10b981'><b>Alternatifler:</b></font> {', '.join(alt_names)}"
 
@@ -539,7 +539,7 @@ class DietPDFGenerator:
                                 # Fallback: Sadece çarpanı yaz
                                 a_ref_info = f" [{total_a_recipe_multiplier:g} Porsiyon]"
 
-                            alt_names.append(f"{obj.name}{a_ref_info} ({a_qty} {a_unit})")
+                            alt_names.append(f"{obj.name}{a_ref_info}")
                     if alt_names:
                         alt_text = f"<br/><br/><font color='#10b981'><b>Alternatifler:</b></font> {', '.join(alt_names)}"
 
