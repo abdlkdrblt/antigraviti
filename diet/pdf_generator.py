@@ -24,6 +24,37 @@ def turkish_upper(text):
         return text
     return text.replace('i', 'İ').replace('ı', 'I').upper()
 
+def solve_unit_value(unit_text, multiplier):
+    """
+    Ölçü birimi içindeki sayıları (10, 13-15, 1/4 vb.) bulup çarpanla çarpar.
+    Örn: "13-15 adet", 3 -> "39-45 adet"
+    Örn: "1/4 kase", 2 -> "2/4 kase"
+    """
+    import re
+    if not unit_text or not multiplier: return unit_text
+    multiplier = float(multiplier)
+    
+    # Aralıklı sayıları kontrol et (Örn: 13-15)
+    range_match = re.match(r'^(\d+)-(\d+)(.*)', unit_text.strip())
+    if range_match:
+        start, end, rest = range_match.groups()
+        return f"{float(start)*multiplier:g}-{float(end)*multiplier:g}{rest}"
+    
+    # Kesir sayıları kontrol et (Örn: 1/4)
+    fraction_match = re.match(r'^(\d+)/(\d+)(.*)', unit_text.strip())
+    if fraction_match:
+        num, den, rest = fraction_match.groups()
+        return f"{float(num)*multiplier:g}/{den}{rest}"
+    
+    # Normal tam/ondalık sayıları kontrol et (Örn: 1.5 veya 10)
+    normal_match = re.match(r'^(\d+\.?\d*)(.*)', unit_text.strip())
+    if normal_match:
+        val, rest = normal_match.groups()
+        return f"{float(val)*multiplier:g}{rest}"
+    
+    # Sayı bulunamazsa sadece çarpanı yanına yazmayı dene (Fallback)
+    return f"{multiplier:g} {unit_text}"
+
 class DonutChart(Flowable):
     def __init__(self, data, labels, colors_list, total_cal, page_bg):
         Flowable.__init__(self)
@@ -411,15 +442,15 @@ class DietPDFGenerator:
                 unit_label = "Ölçü" if val_g >= 1 else (mf.measure_unit.name if mf.measure_unit else 'Birim')
                 p_text = f"{val_g:g} {unit_label}"
                 
-                # 1 Porsiyon Referans Bilgisi -> Otomatik Çarpım Mantığı
+                # Akıllı Çözücü ile porsiyon miktarını hesapla (13-15 adet, 1/4 kase vb. destekler)
                 ref_info = ""
                 if mf.food:
-                    f_ref_val = float(mf.food.measure_value)
-                    f_ref_unit = mf.food.measure_unit.name if mf.food.measure_unit else "Birim"
-                    
-                    # Çarpma işlemi: Diyetteki miktar * Besindeki birim miktarı
-                    total_val = val_g * f_ref_val
-                    ref_info = f" <font color='#6b7280' size='8'>({total_val:g} {f_ref_unit})</font>"
+                    f_ref_text = mf.food.measure_unit.name if mf.food.measure_unit else "Birim"
+                    # Eğer besin özütünde miktar yazılıysa (Örn: 10 adet)
+                    if mf.food.measure_value:
+                        full_ref = f"{float(mf.food.measure_value):g} {f_ref_text}"
+                        solved_text = solve_unit_value(full_ref, val_g)
+                        ref_info = f" <font color='#6b7280' size='8'>({solved_text})</font>"
 
                 multiplier_note = "" # Hatırlatma satırı kaldırıldı
 
@@ -438,15 +469,13 @@ class DietPDFGenerator:
                             a_qty = f"{a_val:g}"
                             a_unit = "Birim" if a_val >= 1 else (a.measure_unit.name if a.measure_unit else "Birim")
                             
-                            # Alternatifin otomatik çarpım referansını ekle
+                            # Alternatifin akıllı çarpım referansını ekle
                             a_ref_info = ""
                             if hasattr(obj, 'measure_value') and hasattr(obj, 'measure_unit'):
-                                r_val = float(obj.measure_value)
-                                r_unit = obj.measure_unit.name if obj.measure_unit else "Birim"
-                                
-                                # Alternatif Miktarı * Alternatif Birim Değeri
-                                total_a_val = a_val * r_val
-                                a_ref_info = f" [{total_a_val:g} {r_unit}]"
+                                r_ref_text = obj.measure_unit.name if obj.measure_unit else "Birim"
+                                full_a_ref = f"{float(obj.measure_value):g} {r_ref_text}"
+                                solved_a = solve_unit_value(full_a_ref, a_val)
+                                a_ref_info = f" [{solved_a}]"
                                 
                             alt_names.append(f"{obj.name}{a_ref_info} ({a_qty} {a_unit})")
                     if alt_names:
@@ -469,20 +498,16 @@ class DietPDFGenerator:
 
             for mr in m.mealrecipe_set.select_related('recipe', 'measure_unit', 'recipe__measure_unit').prefetch_related('alternatives', 'alternatives__measure_unit').all():
                 r = mr.recipe; q = Decimal(str(mr.measure_value or 1))
-                icon = "🥗"
-                
-                # 'Porsiyon' -> 'Değişim' dönüşümü ve porsiyon notu
                 val_g = float(mr.measure_value or 1)
                 
-                # 1 Porsiyon Referans Bilgisi (Tarif için) -> Otomatik Çarpım Mantığı
+                # Akıllı Çözücü ile porsiyon miktarını hesapla (Tarif için)
                 ref_info = ""
                 if r:
-                    r_ref_val = float(r.measure_value)
-                    r_ref_unit = r.measure_unit.name if r.measure_unit else "Porsiyon"
-                    
-                    # Çarpma işlemi: Diyetteki miktar * Tarifteki birim miktarı
-                    total_r_val = val_g * r_ref_val
-                    ref_info = f" <font color='#6b7280' size='8'>({total_r_val:g} {r_ref_unit})</font>"
+                    r_ref_text = r.measure_unit.name if r.measure_unit else "Porsiyon"
+                    if r.measure_value:
+                        full_r_ref = f"{float(r.measure_value):g} {r_ref_text}"
+                        solved_r = solve_unit_value(full_r_ref, val_g)
+                        ref_info = f" <font color='#6b7280' size='8'>({solved_r})</font>"
                 
                 multiplier_note = ""
                 

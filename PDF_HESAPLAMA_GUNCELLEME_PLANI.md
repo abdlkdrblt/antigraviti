@@ -1,42 +1,37 @@
-# PDF Ölçü ve Porsiyon Hesaplama Güncelleme Planı
+# PDF Ölçü ve Porsiyon Hesaplama Güncelleme Planı (V3 - Akıllı Birim Çözücü)
 
-Bu belge, diyet planı PDF'inde yer alan besin miktarlarının daha anlaşılır hale getirilmesi için porsiyon çarpanı ile birim miktarının otomatik çarpılmasına yönelik teknik planı içerir.
+Veritabanı yapısını değiştirmek yerine, kodun içinde tüm senaryoları (tam sayı, aralık, kesir) anlayan "Akıllı Birim Çözücü" mantığına geçiyoruz. Bu sayede mevcut veri giriş alışkanlığınızı bozmadan en doğru sonucu alacağız.
 
-## 1. Mevcut Durum (Problem)
-Şu an besinler PDF'te şu şekilde görünüyor:
-- **Örnek:** 2 Porsiyon Badem (1 Porsiyonu: 10 orta boy)
-- **Alt Bilgi:** HATIRLATMA: 2 ölçü porsiyon miktarının 2 katıdır.
-- **Sıkıntı:** Danışan "kaç tane yiyeceğim?" sorusuna cevap bulmak için zihninden çarpma işlemi yapmak zorunda kalıyor.
+## 1. Hedeflenen Akıllı Hesaplama Örnekleri
 
-## 2. Hedeflenen Durum (Çözüm)
-Besinlerin PDF'te otomatik hesaplanmış net değerlerle görünmesi:
-- **Yeni Görünüm:** 2 Porsiyon Badem **(20 Orta Boy)**
-- **Kural:** `Diyetteki Miktar (Örn: 2)` X `Besin Özütündeki Birim (Örn: 10)` = `Sonuç (20)`
+| Giriş Verisi | Porsiyon (Çarpan) | PDF'teki Net Sonuç | Mantık |
+| :--- | :---: | :--- | :--- |
+| **10** orta boy | 3 | **30** orta boy | Tam Sayı Çarpımı |
+| **13-15** adet | 3 | **39-45** adet | Aralığı Ayrı Ayrı Çarpma |
+| **1/4** kase | 3 | **3/4** kase | Kesiri Çarpma |
+| **1.5** su bardağı | 2 | **3** su bardağı | Ondalık Çarpma |
 
-## 3. Uygulama Adımları
+## 2. Uygulama Planı
 
-### A. Mantıksal Değişiklik
-`pdf_generator.py` içerisindeki `MealFood` döngüsünde şu değişiklik yapılacak:
-- Mevcut `val_g` (diyetteki porsiyon sayısı) alınacak.
-- Besinin `measure_value` (özütteki 1 porsiyonluk miktar) değeri alınacak.
-- Bu iki değer çarpılarak `net_miktar` bulunacak.
-- `HATIRLATMA` yazısı tamamen kaldırılarak bu bilgi ana parantez içine dahil edilecek.
+### A. Metin Parçalama Algoritması
+Sisteme metin içerisindeki sayıları (sayı, tireli aralık veya bölü işaretli kesir) tespit eden bir yardımcı fonksiyon eklenecek.
+1. Metnin başındaki sayısal ifadeyi bul.
+2. Eğer bu bir aralıksa (`13-15`), her iki tarafı da porsiyon ile çarp.
+3. Eğer bu bir kesirse (`1/4`), pay kısmını porsiyon ile çarp.
+4. Çıkan sonucu metnin geri kalanıyla (birimle) birleştirip PDF'e bas.
 
-### B. Kod Güncellemesi (Örnek Mantık)
-```python
-# Eski hali:
-# ref_info = (1 Porsiyonu: 10 orta boy)
+### B. PDF Kod Güncellemesi
+`pdf_generator.py` içindeki `MealFood` döngüsü bu akıllı fonksiyonu çağıracak. 
 
-# Yeni hali:
-net_val = float(mf.measure_value) * float(mf.food.measure_value)
-net_unit = mf.food.measure_unit.name
-ref_info = f" ({net_val:g} {net_unit})"
-```
+**Örnek Senaryo:**
+`Diyanetteki Porsiyon: 3`   
+`Besindeki Ölçü: "13-15 adet"`   
+`Sistem Çıktısı: "39-45 adet"`
 
-## 4. Faydalar
-1. **Basitlik:** Danışan tek seferde ne kadar tüketeceğini görür.
-2. **Hata Payı:** Diyetisyenin notlara "2 katını ye" yazmasına gerek kalmaz, sistem otomatik hesaplar.
-3. **Estetik:** Gereksiz "Hatırlatma" satırları silineceği için diyet listesi çok daha temiz görünür.
+## 3. Faydalar
+1. **Sıfır Veritabanı Değişikliği:** Mevcut verilerinizi bozmaz, yeni kutucuklar eklemez.
+2. **Esneklik:** Her türlü yazım şeklini (kesir, tire, nokta) destekler.
+3. **Okunabilirlik:** Danışan "3 porsiyon kuruyemiş, her porsiyon 13-15 ise kaç eder?" diye düşünmez, direkt "39-45 tane yiyeceğim" der.
 
 ---
-**Onayınızla bu değişikliği `pdf_generator.py` dosyasına uygulayabilirim.**
+**Onayınızla bu "Akıllı Birim Çözücü" algoritmasını `pdf_generator.py` dosyasına uygulayabilirim.**
