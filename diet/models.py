@@ -83,8 +83,9 @@ class FoodGroup(models.Model):
 class Food(models.Model):
     food_group = models.ForeignKey(FoodGroup, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Besin Grubu")
     name = models.CharField(max_length=200, verbose_name="Besin Adı")
-    measure_value = models.DecimalField(max_digits=5, decimal_places=2, default=1.0, verbose_name="Ölçü Miktarı (Örn: 10, 1.5)")
-    measure_unit = models.ForeignKey(MeasureUnit, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Ölçü Birimi (Örn: orta boy, kase)")
+    measure_value = models.CharField(max_length=50, default="1", verbose_name="Ölçü Miktarı (Örn: 10, 13-15, 1/4)")
+    measure_unit_text = models.CharField(max_length=100, blank=True, null=True, verbose_name="Ölçü Birimi (Örn: orta boy, adet, kase)")
+    measure_unit = models.ForeignKey(MeasureUnit, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Besin Değişim Birimi (İstatistiksel)")
     calories = models.DecimalField(max_digits=6, decimal_places=2, verbose_name="Kalori (kcal)")
     carbohydrates = models.DecimalField(max_digits=5, decimal_places=2, verbose_name="Karbonhidrat (g)")
     protein = models.DecimalField(max_digits=5, decimal_places=2, verbose_name="Protein (g)")
@@ -96,8 +97,8 @@ class Food(models.Model):
         ordering = ['name']
 
     def __str__(self):
-        unit_name = self.measure_unit.name if self.measure_unit else "Birim Yok"
-        return f"{self.name} ({float(self.measure_value):g} {unit_name})"
+        unit_str = self.measure_unit_text if self.measure_unit_text else (self.measure_unit.name if self.measure_unit else "")
+        return f"{self.name} ({self.measure_value} {unit_str})"
 
 class ExchangeGroup(models.Model):
     name = models.CharField(max_length=200, verbose_name="Değişim Grubu Adı (Örn: Ekmek Grubu)")
@@ -151,8 +152,9 @@ class Recipe(models.Model):
     carbohydrates = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Karbonhidrat (g)")
     protein = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Protein (g)")
     fat = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Yağ (g)")
-    measure_value = models.DecimalField(max_digits=5, decimal_places=2, default=1.0, verbose_name="Ölçü Miktarı (Çarpan)")
-    measure_unit = models.ForeignKey(MeasureUnit, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Ölçü Birimi")
+    measure_value = models.CharField(max_length=50, default="1", verbose_name="Ölçü Miktarı (Çarpan)")
+    measure_unit_text = models.CharField(max_length=100, blank=True, null=True, verbose_name="Ölçü Birimi Yazısı")
+    measure_unit = models.ForeignKey(MeasureUnit, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Ölçü Birimi (Klasik)")
 
     class Meta:
         verbose_name = "Tarif"
@@ -177,8 +179,9 @@ class RecipePortion(models.Model):
 class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name="ingredients", verbose_name="Tarif")
     name = models.CharField(max_length=200, verbose_name="Besin Adı", default="Malzeme")
-    measure_value = models.DecimalField(max_digits=5, decimal_places=2, default=1.0, verbose_name="Hesaplama Miktarı")
-    measure_unit = models.ForeignKey(MeasureUnit, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Ölçü Birimi")
+    measure_value = models.CharField(max_length=50, default="1", verbose_name="Hesaplama Miktarı")
+    measure_unit_text = models.CharField(max_length=100, blank=True, null=True, verbose_name="Birim Yazısı")
+    measure_unit = models.ForeignKey(MeasureUnit, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Ölçü Birimi (Klasik)")
     calories = models.DecimalField(max_digits=6, decimal_places=2, default=0, verbose_name="Kalori (kcal)")
     carbohydrates = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Karbonhidrat (g)")
     protein = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Protein (g)")
@@ -189,8 +192,8 @@ class RecipeIngredient(models.Model):
         verbose_name_plural = "Tarif Malzemeleri"
 
     def __str__(self):
-        unit_name = self.measure_unit.name if self.measure_unit else "Birim"
-        return f"{self.measure_value} {unit_name} {self.name}"
+        unit_str = self.measure_unit_text if self.measure_unit_text else (self.measure_unit.name if self.measure_unit else "Birim")
+        return f"{self.measure_value} {unit_str} {self.name}"
 
 
 class DietPlan(models.Model):

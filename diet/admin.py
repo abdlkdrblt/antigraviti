@@ -121,10 +121,10 @@ class FoodGroupAdmin(admin.ModelAdmin):
 
 @admin.register(Food)
 class FoodAdmin(admin.ModelAdmin):
-    form = MeasureUnitManualForm
-    list_display = ["name", "food_group", "measure_value", "measure_unit", "calories"]
+    list_display = ["name", "food_group", "measure_value", "measure_unit_text", "calories"]
     search_fields = ["name"]
     list_filter = ["food_group"]
+    fields = ["food_group", "name", "measure_value", "measure_unit_text", "calories", "carbohydrates", "protein", "fat"]
 
     class Media:
         js = ("diet/js/food_group_autofill.js",)
@@ -148,7 +148,7 @@ class RecipeIngredientInline(admin.TabularInline):
     model = RecipeIngredient
     form = MeasureUnitManualForm
     extra = 0
-    fields = ["name"] # , "measure_value", "measure_unit_manual", "calories", "carbohydrates", "protein", "fat"]
+    fields = ["name", "measure_value", "measure_unit_text"]
 
 
 class RecipePortionInline(admin.TabularInline):
@@ -158,14 +158,13 @@ class RecipePortionInline(admin.TabularInline):
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
-    form = MeasureUnitManualForm
-    list_display = ["name", "measure_value", "measure_unit", "calories"]
+    list_display = ["name", "measure_value", "measure_unit_text", "calories"]
     search_fields = ["name"]
     inlines = [RecipeIngredientInline, RecipePortionInline]
     fields = [
         "name",
         "measure_value",
-        "measure_unit_manual",
+        "measure_unit_text",
         "instructions",
         "image",
         "youtube_link",
