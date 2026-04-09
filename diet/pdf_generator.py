@@ -144,8 +144,28 @@ class DietPDFGenerator:
         styles.add(ParagraphStyle(name='Instruction_Text', fontName=f_reg, fontSize=9, textColor=self.colors["text"], leading=14, bulletFontName=f_bold, bulletFontSize=8))
         return styles
 
-    def _safe_image(self, path, width=3*cm, max_h=None):
+    def _safe_image(self, image_field, width=3*cm, max_h=None):
+        if not image_field: return None
+        
+        # Olası dosya yollarını kontrol et (Absolute path ve Storage path)
+        path = None
+        try:
+            if hasattr(image_field, 'path') and os.path.exists(image_field.path):
+                path = image_field.path
+            elif hasattr(image_field, 'name'):
+                # Storage üzerinden tam yolu bulmaya çalış (Render Media Storage için)
+                from django.core.files.storage import default_storage
+                if default_storage.exists(image_field.name):
+                    # Local path dönerse kullan, yoksa direkt ismi kullanmayı dene
+                    try:
+                        path = default_storage.path(image_field.name)
+                    except NotImplementedError:
+                        # Bazı storage'lar (S3 vb) .path desteklemez, ama biz local dosya arıyoruz
+                        pass
+        except: pass
+
         if not path or not os.path.exists(path): return None
+        
         try:
             img = Image(path)
             aspect = img.imageHeight / img.imageWidth
@@ -191,7 +211,7 @@ class DietPDFGenerator:
         from reportlab.lib import colors
         from reportlab.lib.units import cm
 
-        img = self._safe_image(r.image.path if r.image else None, width=6.5*cm, max_h=5*cm) or Paragraph("📷", self.styles['Card_Title'])
+        img = self._safe_image(r.image if r.image else None, width=6.5*cm, max_h=5*cm) or Paragraph("📷", self.styles['Card_Title'])
         instrs = [Paragraph(line.strip(), self.styles['Instruction_Text'], bulletText="•") for line in (r.instructions or "").split(".") if line.strip()]
         
         ingredients_list = []
