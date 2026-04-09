@@ -191,7 +191,7 @@ class DietPDFGenerator:
         from reportlab.lib import colors
         from reportlab.lib.units import cm
 
-        img = self._safe_image(r.image.path if r.image else None, width=6.5*cm, max_h=5*cm) or "📷"
+        img = self._safe_image(r.image.path if r.image else None, width=6.5*cm, max_h=5*cm) or Paragraph("📷", self.styles['Card_Title'])
         instrs = [Paragraph(line.strip(), self.styles['Instruction_Text'], bulletText="•") for line in (r.instructions or "").split(".") if line.strip()]
         
         ingredients_list = []
