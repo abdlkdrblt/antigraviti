@@ -83,8 +83,8 @@ class FoodGroup(models.Model):
 class Food(models.Model):
     food_group = models.ForeignKey(FoodGroup, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Besin Grubu")
     name = models.CharField(max_length=200, verbose_name="Besin Adı")
-    measure_value = models.DecimalField(max_digits=5, decimal_places=2, default=1.0, verbose_name="Ölçü Miktarı")
-    measure_unit = models.ForeignKey(MeasureUnit, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Ölçü Birimi")
+    measure_value = models.DecimalField(max_digits=5, decimal_places=2, default=1.0, verbose_name="Ölçü Miktarı (Örn: 10, 1.5)")
+    measure_unit = models.ForeignKey(MeasureUnit, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Ölçü Birimi (Örn: orta boy, kase)")
     calories = models.DecimalField(max_digits=6, decimal_places=2, verbose_name="Kalori (kcal)")
     carbohydrates = models.DecimalField(max_digits=5, decimal_places=2, verbose_name="Karbonhidrat (g)")
     protein = models.DecimalField(max_digits=5, decimal_places=2, verbose_name="Protein (g)")
@@ -151,7 +151,7 @@ class Recipe(models.Model):
     carbohydrates = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Karbonhidrat (g)")
     protein = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Protein (g)")
     fat = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Yağ (g)")
-    measure_value = models.DecimalField(max_digits=5, decimal_places=2, default=1.0, verbose_name="Ölçü Miktarı")
+    measure_value = models.DecimalField(max_digits=5, decimal_places=2, default=1.0, verbose_name="Ölçü Miktarı (Çarpan)")
     measure_unit = models.ForeignKey(MeasureUnit, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Ölçü Birimi")
 
     class Meta:
@@ -177,7 +177,7 @@ class RecipePortion(models.Model):
 class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name="ingredients", verbose_name="Tarif")
     name = models.CharField(max_length=200, verbose_name="Besin Adı", default="Malzeme")
-    measure_value = models.DecimalField(max_digits=5, decimal_places=2, default=1.0, verbose_name="Ölçü Miktarı")
+    measure_value = models.DecimalField(max_digits=5, decimal_places=2, default=1.0, verbose_name="Hesaplama Miktarı")
     measure_unit = models.ForeignKey(MeasureUnit, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Ölçü Birimi")
     calories = models.DecimalField(max_digits=6, decimal_places=2, default=0, verbose_name="Kalori (kcal)")
     carbohydrates = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name="Karbonhidrat (g)")
