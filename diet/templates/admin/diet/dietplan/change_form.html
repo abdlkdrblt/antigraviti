@@ -93,7 +93,6 @@
         border-color: #059669 !important;
         font-weight: bold;
     }
-    /* Kaydet butonu kapanmasın diye sayfa altına boşluk */
     #content-main {
         padding-bottom: 200px !important;
     }
@@ -101,7 +100,173 @@
         position: relative;
         z-index: 10000; /* Dashboard'un üzerinde kalsın */
     }
+    
+    /* Özelleştirilmiş Başlık Renkleri */
+    
+    /* Diyet Hedef Porsiyonları Başlığı */
+    #target_portions-group > h2,
+    #target_portions-group .djn-group-root > h2 {
+        background-color: #3b82f6 !important; /* Mavi */
+        color: white !important;
+        border-radius: 6px;
+        padding: 10px 15px;
+        margin-bottom: 10px;
+    }
+
+    /* Öğünler Ana Başlığı */
+    #meals-group > h2,
+    #meals-group .djn-group-root > h2 {
+        background-color: #f59e0b !important; /* Turuncu */
+        color: white !important;
+        border-radius: 6px;
+        padding: 10px 15px;
+        margin-bottom: 10px;
+    }
+
+    /* Tekil Öğün Başlıkları (Öğün 1, Öğün 2 vb.) */
+    #meals-group .djn-item > h3,
+    #meals-group .inline-related > h3 {
+        background-color: #8b5cf6 !important; /* Mor */
+        color: white !important;
+        border-radius: 4px;
+        padding: 8px 12px;
+        margin-top: 5px;
+        margin-bottom: 5px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    /* İpucu metni dizaynı */
+    .toggle-hint {
+        font-size: 11px;
+        opacity: 0.8;
+        font-weight: normal;
+        background: rgba(0,0,0,0.2);
+        padding: 2px 8px;
+        border-radius: 12px;
+    }
+
+    /* Öğün İçerisindeki Yemek/Tarif Başlıkları */
+    #meals-group .djn-group-nested > h2 {
+        background-color: #10b981 !important; /* Yeşil */
+        color: white !important;
+        border-radius: 4px;
+        padding: 6px 12px;
+    }
 </style>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Tüm Öğün Başlıklarını Bul ve (Göster / Gizle) metni ekleyerek tıklanabilir yap
+    document.addEventListener('click', function(e) {
+        // Eğer tıklanan yer Öğün başlığı ise (Öğün: #1 vs.)
+        if (e.target.matches('#meals-group .djn-item > h3') || e.target.closest('#meals-group .djn-item > h3')) {
+            let header = e.target.matches('h3') ? e.target : e.target.closest('h3');
+            if (!header) return;
+            
+            // Eğer bir input ya da butona tıklandıysa müdahale etme
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.tagName === 'A') return;
+            
+            let item = header.closest('.djn-item');
+            if (!item) return;
+
+            // İçerik kısmını bul
+            let fieldsets = item.querySelectorAll(':scope > fieldset, :scope > .djn-group-nested');
+            
+            let isCollapsed = header.classList.contains('item-collapsed');
+            
+            fieldsets.forEach(el => {
+                if (isCollapsed) {
+                    el.style.display = '';
+                } else {
+                    el.style.display = 'none';
+                }
+            });
+
+            if (isCollapsed) {
+                header.classList.remove('item-collapsed');
+            } else {
+                header.classList.add('item-collapsed');
+            }
+        }
+    });
+
+    // Başlıklara ipucu ekle
+    const addHints = () => {
+        const mealItems = document.querySelectorAll('#meals-group .djn-item');
+        
+        mealItems.forEach(item => {
+            const h = item.querySelector(':scope > h3');
+            if (h && !h.dataset.hintAdded) {
+                h.style.cursor = 'pointer';
+                h.title = "Göster/Gizle için tıklayın";
+                
+                // Sağ tarafa buton/yazı ekle
+                let span = document.createElement('span');
+                span.className = 'toggle-hint';
+                span.innerText = 'Göster / Gizle';
+                h.appendChild(span);
+                
+                h.dataset.hintAdded = "true";
+            }
+            
+            // Dinamik Seçili Öğünü İsim Olarak Verme Mantığı
+            const selectBoxes = item.querySelectorAll('select[id$="-meal_type"]');
+            if (h && selectBoxes.length > 0) {
+                const selectBox = selectBoxes[0];
+                const updateTitle = () => {
+                    const option = selectBox.options[selectBox.selectedIndex];
+                    const selectedText = option ? option.text : '';
+                    
+                    const inlineLabel = h.querySelector('.inline_label');
+                    let customLabel = h.querySelector('.custom-meal-title');
+                    
+                    if (selectBox.value && selectedText && selectedText.trim() !== '') {
+                        if (!customLabel) {
+                            customLabel = document.createElement('span');
+                            customLabel.className = 'custom-meal-title';
+                            customLabel.style.fontWeight = 'bold';
+                            customLabel.style.color = '#fff';
+                            // inline_label'ın hemen yanına ekle
+                            if (inlineLabel) {
+                                inlineLabel.parentNode.insertBefore(customLabel, inlineLabel.nextSibling);
+                            } else {
+                                h.appendChild(customLabel);
+                            }
+                        }
+                        const targetText = ' ( ' + selectedText + ' ) ';
+                        // Numarayı gizle ve yeni ismi yaz (veya hem ismi hem numarayı birleştir, biz numarayı gizliyoruz)
+                        if (inlineLabel && inlineLabel.style.display !== 'none') inlineLabel.style.display = 'none';
+                        if (customLabel.innerText !== targetText) customLabel.innerText = targetText;
+                        if (customLabel.style.display !== '') customLabel.style.display = '';
+                    } else {
+                        // Eğer seçenek temizlendiyse ("------") varsayılana dön
+                        if (customLabel && customLabel.style.display !== 'none') customLabel.style.display = 'none';
+                        if (inlineLabel && inlineLabel.style.display !== '') inlineLabel.style.display = '';
+                    }
+                };
+
+                // İlk yüklemede ve değer değiştiğinde çalıştır
+                if (!selectBox.dataset.listenerAdded) {
+                    selectBox.addEventListener('change', updateTitle);
+                    selectBox.dataset.listenerAdded = 'true';
+                    // Sadece ilk defa gördüğümüzde mevcut değeri yansıtsın, böylece sonsuz döngü olmaz
+                    updateTitle();
+                }
+            }
+        });
+    };
+    
+    // JS dom yüklendiğinde ve dinamik eleman eklendiğinde çalıştır
+    addHints();
+    // setTimeout ile biraz bekleyip tekrar ekleyelim ki nested_admin yüklendikten sonra da eklensin
+    setTimeout(addHints, 1000);
+    setTimeout(addHints, 2000);
+
+    const observer = new MutationObserver(addHints);
+    observer.observe(document.body, { childList: true, subtree: true });
+});
+</script>
 <script src="{% static 'diet/js/live_dashboard.js' %}?v=1.2.0"></script>
 {% endblock %}
 

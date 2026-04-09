@@ -261,7 +261,7 @@ class Meal(models.Model):
     ]
     diet_plan = models.ForeignKey(DietPlan, on_delete=models.CASCADE, related_name="meals", verbose_name="Diyet Planı")
     meal_type = models.CharField(max_length=20, choices=MEAL_CHOICES, verbose_name="Öğün Tipi")
-    meal_time = models.TimeField(null=True, blank=True, verbose_name="Öğün Saati")
+    meal_time = models.CharField(max_length=50, null=True, blank=True, verbose_name="Öğün Saati")
     meal_image = models.ImageField(upload_to='diet/meals/', blank=True, null=True, verbose_name="Öğün Görseli (Opsiyonel)")
     notes = models.TextField(blank=True, null=True, verbose_name="Öğün Notları")
 
@@ -271,7 +271,7 @@ class Meal(models.Model):
         ordering = ['meal_type']
 
     def __str__(self):
-        time_str = f" ({self.meal_time.strftime('%H:%M')})" if self.meal_time else ""
+        time_str = f" ({self.meal_time})" if self.meal_time else ""
         return f"{self.diet_plan.patient} - {self.get_meal_type_display()}{time_str}"
 
 

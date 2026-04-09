@@ -219,6 +219,34 @@ class DietPlanTargetPortionInline(nested_admin.NestedTabularInline):
     model = DietPlanTargetPortion
     extra = 0
     fields = ["food_group", "target_amount"]
+    classes = ["collapse"]
+
+    def get_extra(self, request, obj=None, **kwargs):
+        existing_count = obj.target_portions.count() if obj else 0
+        total_groups = FoodGroup.objects.count()
+        missing = total_groups - existing_count
+        return missing if missing > 0 else 0
+
+    def get_formset(self, request, obj=None, **kwargs):
+        formset = super().get_formset(request, obj, **kwargs)
+        
+        class CustomFormset(formset):
+            def __init__(self, *args, **kwargs):
+                if request.method == 'GET':
+                    existing_groups = []
+                    if obj:
+                        existing_groups = list(obj.target_portions.values_list('food_group_id', flat=True))
+                    
+                    missing_groups = FoodGroup.objects.exclude(id__in=existing_groups)
+                    
+                    initial = kwargs.get('initial', [])
+                    for fg in missing_groups:
+                        initial.append({'food_group': fg.id, 'target_amount': 0})
+                    
+                    kwargs['initial'] = initial
+                super().__init__(*args, **kwargs)
+                
+        return CustomFormset
 
 @admin.register(DietPlan)
 class DietPlanAdmin(nested_admin.NestedModelAdmin):

@@ -19,6 +19,11 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.graphics.charts.piecharts import Pie
 from reportlab.graphics.shapes import Drawing, Rect, Group, String, Circle
 
+def turkish_upper(text):
+    if not isinstance(text, str):
+        return text
+    return text.replace('i', 'İ').replace('ı', 'I').upper()
+
 class DonutChart(Flowable):
     def __init__(self, data, labels, colors_list, total_cal, page_bg):
         Flowable.__init__(self)
@@ -48,7 +53,7 @@ class DonutChart(Flowable):
         for i, (label, color) in enumerate(zip(self.labels, self.colors_list)):
             y = 3.5*cm - (i * 0.7*cm)
             d.add(Circle(5.2*cm, y+0.15*cm, 0.12*cm, fillColor=color, strokeColor=None))
-            d.add(String(5.6*cm, y+0.08*cm, label.upper(), fontName='DejaVu', fontSize=8, fillColor=colors.HexColor("#475569")))
+            d.add(String(5.6*cm, y+0.08*cm, turkish_upper(label), fontName='DejaVu', fontSize=8, fillColor=colors.HexColor("#475569")))
         d.drawOn(self.canv, 0, 0)
 
 class ProgressBar(Flowable):
@@ -62,7 +67,7 @@ class ProgressBar(Flowable):
         # Üst metin alanı: Etiket solda, Değer sağda (Hedef silindi)
         self.canv.setFont("DejaVu-Bold", 7.5)
         self.canv.setFillColor(colors.HexColor("#334155"))
-        self.canv.drawString(0, 0.65*cm, self.label.upper())
+        self.canv.drawString(0, 0.65*cm, turkish_upper(self.label))
         
         self.canv.setFont("DejaVu-Bold", 8)
         self.canv.setFillColor(self.color)
@@ -166,7 +171,7 @@ class DietPDFGenerator:
             left_col.extend(ingredients_list)
 
         right_col = [
-            Paragraph(r.name.upper(), self.styles['Clinic_Name']), 
+            Paragraph(turkish_upper(r.name), self.styles['Clinic_Name']), 
             Spacer(1, 8),
         ]
         
@@ -202,7 +207,7 @@ class DietPDFGenerator:
         
         # --- 1. HEADER ---
         d_name = self.profile.name if self.profile else "Aylin Balkan"
-        d_title = (self.profile.title if self.profile else "UZMAN DİYETİSYEN").upper()
+        d_title = turkish_upper(self.profile.title if self.profile else "UZMAN DİYETİSYEN")
         logo = self._safe_image(self.profile.logo.path if self.profile and self.profile.logo else None, width=3.5*cm)
         # Önce Ünvan (BÜYÜK), sonra İsim (küçük)
         h_table = Table([[ [Paragraph(d_title, self.styles['Clinic_Name']), Paragraph(d_name, self.styles['Clinic_Tagline'])], logo ]], colWidths=[13*cm, 4.6*cm])
@@ -223,7 +228,7 @@ class DietPDFGenerator:
             
             # Sol Taraf: İsim ve Temel İstatistikler (Hiyerarşik Yapı)
             p_name_info = f"""
-            <font color='{ACCENT}' size='14'><b>{p.first_name.upper()} {p.last_name.upper()}</b></font><br/>
+            <font color='{ACCENT}' size='14'><b>{turkish_upper(p.first_name)} {turkish_upper(p.last_name)}</b></font><br/>
             <font color='{GOLD}' size='8'>DANIŞAN PROFİLİ</font>
             """
             
@@ -331,8 +336,8 @@ class DietPDFGenerator:
         # --- 3. MEAL TABLE STRUCTURE (SPLIT-FRIENDLY) ---
         for m in meals:
             # Her öğün için TEK ana tablo oluştur
-            time_text = f" <font color='#C5A059' size='11'>[  {m.meal_time.strftime('%H:%M')} ]</font>" if m.meal_time else ""
-            header_text = f"{m.get_meal_type_display().upper()} {time_text}"
+            time_text = f" <font color='#C5A059' size='11'>[  {m.meal_time} ]</font>" if m.meal_time else ""
+            header_text = f"{turkish_upper(m.get_meal_type_display())} {time_text}"
             meal_data = [[ Paragraph(header_text, self.styles['Meal_Header']) ]]
             
             # Öğün altındaki tüm besinleri ve tarifleri satır olarak ekle
@@ -506,15 +511,17 @@ class DietPDFGenerator:
 
             for r in recs:
                 rec_card = Table([
-                    [Paragraph(r.title.upper(), self.styles['Card_Title'])],
+                    [Paragraph(turkish_upper(r.title), self.styles['Card_Title'])],
                     [Paragraph(r.content, self.styles['Instruction_Text'])]
                 ], colWidths=[17.6*cm])
                 rec_card.setStyle(TableStyle([
                     ('BACKGROUND', (0,0), (-1,-1), colors.white),
                     ('BOX', (0,0), (-1,-1), 0.5, self.colors["accent"]),
                     ('ROUNDEDCORNERS', [10, 10, 10, 10]),
-                    ('TOPPADDING', (0,0), (-1,-1), 12),
-                    ('BOTTOMPADDING', (0,0), (-1,-1), 12),
+                    ('TOPPADDING', (0,0), (-1,0), 12),    # Başlık üst boşluğu
+                    ('BOTTOMPADDING', (0,0), (-1,0), 2),     # Başlık-İçerik arası (üstten)
+                    ('TOPPADDING', (0,1), (-1,1), 2),        # Başlık-İçerik arası (alttan)
+                    ('BOTTOMPADDING', (0,1), (-1,1), 12), # İçerik alt boşluğu
                     ('LEFTPADDING', (0,0), (-1,-1), 15),
                     ('RIGHTPADDING', (0,0), (-1,-1), 15),
                 ]))
@@ -522,104 +529,104 @@ class DietPDFGenerator:
                 elements.append(Spacer(1, 12))
 
         # --- 7. GENİŞLETİLMİŞ ALIŞVERİŞ LİSTESİ (REFACTORED & AT THE END) ---
-        from .models import Recipe, Food
-        shop_foods = {} # (name, unit): {name, qty, unit, is_alt}
-        shop_recipes = {} # r_id: {obj, is_alt, multiplier}
-
-        for m in meals:
-            # Foods Analysis
-            for mf in m.mealfood_set.all():
-                if mf.food:
-                    u = mf.measure_unit.name if mf.measure_unit else "Birim"
-                    key = (mf.food.name, u)
-                    if key not in shop_foods: shop_foods[key] = {'name': mf.food.name, 'qty': Decimal("0"), 'unit': u, 'is_alt': False}
-                    shop_foods[key]['qty'] += Decimal(str(mf.measure_value))
-                for alt in mf.alternatives.all():
-                    it = alt.item
-                    u = alt.measure_unit.name if alt.measure_unit else "Birim"
-                    if isinstance(it, Food):
-                        key = (it.name, u)
-                        if key not in shop_foods: shop_foods[key] = {'name': it.name, 'qty': Decimal("0"), 'unit': u, 'is_alt': True}
-                        shop_foods[key]['qty'] += Decimal(str(alt.measure_value))
-                    elif isinstance(it, Recipe):
-                        if it.id not in shop_recipes: shop_recipes[it.id] = {'obj': it, 'is_alt': True, 'mult': Decimal("0")}
-                        shop_recipes[it.id]['mult'] += Decimal(str(alt.measure_value))
-
-            # Recipes Analysis
-            for mr in m.mealrecipe_set.all():
-                if mr.recipe:
-                    rid = mr.recipe.id
-                    if rid not in shop_recipes: shop_recipes[rid] = {'obj': mr.recipe, 'is_alt': False, 'mult': Decimal("0")}
-                    shop_recipes[rid]['mult'] += Decimal(str(mr.measure_value or 1))
-                for alt in mr.alternatives.all():
-                    it = alt.item
-                    if isinstance(it, Recipe):
-                        if it.id not in shop_recipes: shop_recipes[it.id] = {'obj': it, 'is_alt': True, 'mult': Decimal("0")}
-                        shop_recipes[it.id]['mult'] += Decimal(str(alt.measure_value))
-                    elif isinstance(it, Food):
-                        u = alt.measure_unit.name if alt.measure_unit else "Birim"
-                        key = (it.name, u)
-                        if key not in shop_foods: shop_foods[key] = {'name': it.name, 'qty': Decimal("0"), 'unit': u, 'is_alt': True}
-                        shop_foods[key]['qty'] += Decimal(str(alt.measure_value))
-
-        if shop_foods or shop_recipes:
-            elements.append(Spacer(1, 20))
-            elements.append(HRFlowable(width="100%", thickness=1, color=self.colors["accent"], spaceAfter=20))
-            elements.append(Paragraph("HAFTALIK ALIŞVERİŞ REHBERİ", self.styles['Clinic_Name']))
-            elements.append(Paragraph("PLANINIZA GÖRE ÖZELLEŞTİRİLMİŞ MARKET LİSTESİ", self.styles['Clinic_Tagline']))
-            elements.append(HRFlowable(width="100%", thickness=0.5, color=self.colors["border"], spaceAfter=15))
-            
-            # --- BESİNLER GRUBU ---
-            if shop_foods:
-                elements.append(Paragraph("TEMEL BESİNLER VE ATIŞTIRMALIKLAR", self.styles['Meal_Header']))
-                food_rows = []
-                sorted_foods = sorted(shop_foods.values(), key=lambda x: x['name'])
-                for f_item in sorted_foods:
-                    star = "*" if f_item['is_alt'] else ""
-                    food_rows.append(Paragraph(f"☐ <b>{f_item['name']}</b>{star}", self.styles['Card_Text']))
-                
-                # Sütunlu tabloya böl (3 sütun)
-                cols = 3
-                grid_data = [food_rows[i:i+cols] for i in range(0, len(food_rows), cols)]
-                # Eksik hücreleri doldur
-                for row in grid_data: 
-                    while len(row) < cols: row.append("")
-                
-                f_table = Table(grid_data, colWidths=[5.8*cm]*cols)
-                f_table.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP'), ('LEFTPADDING',(0,0),(-1,-1),5), ('TOPPADDING',(0,0),(-1,-1),5)]))
-                elements.append(f_table)
-                elements.append(Spacer(1, 20))
-
-            # --- TARİFLER VE İÇERİKLERİ ---
-            if shop_recipes:
-                elements.append(Paragraph("TARİF İÇERİKLERİ VE ÖZEL KARIŞIMLAR", self.styles['Meal_Header']))
-                for r_id, r_data in shop_recipes.items():
-                    r_obj = r_data['obj']
-                    star = "*" if r_data['is_alt'] else ""
-                    mult = float(r_data['mult'])
-                    
-                    r_header = Paragraph(f"<b>{r_obj.name.upper()}</b>{star} <font size='8' color='#64748b'>({mult:g} Değişim için)</font>", self.styles['Card_Title'])
-                    
-                    ing_texts = []
-                    for ing in r_obj.ingredients.all():
-                        i_name = ing.name
-                        ing_texts.append(Paragraph(f"• {i_name}", self.styles['Card_Text']))
-                    
-                    # Tarif kartı gibi paketle
-                    r_ing_table = Table([[ [r_header, Spacer(1, 4)] + ing_texts ]], colWidths=[17.6*cm])
-                    r_ing_table.setStyle(TableStyle([
-                        ('BACKGROUND', (0,0), (-1,-1), colors.white),
-                        ('BOX', (0,0), (-1,-1), 0.5, self.colors["border"]),
-                        ('LEFTBORDER', (0,0), (0,0), 3, self.colors["accent"]),
-                        ('TOPPADDING', (0,0), (-1,-1), 10),
-                        ('BOTTOMPADDING', (0,0), (-1,-1), 10),
-                        ('LEFTPADDING', (0,0), (-1,-1), 15),
-                    ]))
-                    elements.append(KeepTogether(r_ing_table))
-                    elements.append(Spacer(1, 10))
-
-            elements.append(Spacer(1, 10))
-            elements.append(Paragraph("<font size='7' color='#ef4444'>* Yıldız işareti ile belirtilenler alternatif öğün tercihleriniz için gerekli olanlardır.</font>", self.styles['Card_Text']))
+        # from .models import Recipe, Food
+        # shop_foods = {} # (name, unit): {name, qty, unit, is_alt}
+        # shop_recipes = {} # r_id: {obj, is_alt, multiplier}
+        # 
+        # for m in meals:
+        #     # Foods Analysis
+        #     for mf in m.mealfood_set.all():
+        #         if mf.food:
+        #             u = mf.measure_unit.name if mf.measure_unit else "Birim"
+        #             key = (mf.food.name, u)
+        #             if key not in shop_foods: shop_foods[key] = {'name': mf.food.name, 'qty': Decimal("0"), 'unit': u, 'is_alt': False}
+        #             shop_foods[key]['qty'] += Decimal(str(mf.measure_value))
+        #         for alt in mf.alternatives.all():
+        #             it = alt.item
+        #             u = alt.measure_unit.name if alt.measure_unit else "Birim"
+        #             if isinstance(it, Food):
+        #                 key = (it.name, u)
+        #                 if key not in shop_foods: shop_foods[key] = {'name': it.name, 'qty': Decimal("0"), 'unit': u, 'is_alt': True}
+        #                 shop_foods[key]['qty'] += Decimal(str(alt.measure_value))
+        #             elif isinstance(it, Recipe):
+        #                 if it.id not in shop_recipes: shop_recipes[it.id] = {'obj': it, 'is_alt': True, 'mult': Decimal("0")}
+        #                 shop_recipes[it.id]['mult'] += Decimal(str(alt.measure_value))
+        # 
+        #     # Recipes Analysis
+        #     for mr in m.mealrecipe_set.all():
+        #         if mr.recipe:
+        #             rid = mr.recipe.id
+        #             if rid not in shop_recipes: shop_recipes[rid] = {'obj': mr.recipe, 'is_alt': False, 'mult': Decimal("0")}
+        #             shop_recipes[rid]['mult'] += Decimal(str(mr.measure_value or 1))
+        #         for alt in mr.alternatives.all():
+        #             it = alt.item
+        #             if isinstance(it, Recipe):
+        #                 if it.id not in shop_recipes: shop_recipes[it.id] = {'obj': it, 'is_alt': True, 'mult': Decimal("0")}
+        #                 shop_recipes[it.id]['mult'] += Decimal(str(alt.measure_value))
+        #             elif isinstance(it, Food):
+        #                 u = alt.measure_unit.name if alt.measure_unit else "Birim"
+        #                 key = (it.name, u)
+        #                 if key not in shop_foods: shop_foods[key] = {'name': it.name, 'qty': Decimal("0"), 'unit': u, 'is_alt': True}
+        #                 shop_foods[key]['qty'] += Decimal(str(alt.measure_value))
+        # 
+        # if shop_foods or shop_recipes:
+        #     elements.append(Spacer(1, 20))
+        #     elements.append(HRFlowable(width="100%", thickness=1, color=self.colors["accent"], spaceAfter=20))
+        #     elements.append(Paragraph("HAFTALIK ALIŞVERİŞ REHBERİ", self.styles['Clinic_Name']))
+        #     elements.append(Paragraph("PLANINIZA GÖRE ÖZELLEŞTİRİLMİŞ MARKET LİSTESİ", self.styles['Clinic_Tagline']))
+        #     elements.append(HRFlowable(width="100%", thickness=0.5, color=self.colors["border"], spaceAfter=15))
+        #     
+        #     # --- BESİNLER GRUBU ---
+        #     if shop_foods:
+        #         elements.append(Paragraph("TEMEL BESİNLER VE ATIŞTIRMALIKLAR", self.styles['Meal_Header']))
+        #         food_rows = []
+        #         sorted_foods = sorted(shop_foods.values(), key=lambda x: x['name'])
+        #         for f_item in sorted_foods:
+        #             star = "*" if f_item['is_alt'] else ""
+        #             food_rows.append(Paragraph(f"☐ <b>{f_item['name']}</b>{star}", self.styles['Card_Text']))
+        #         
+        #         # Sütunlu tabloya böl (3 sütun)
+        #         cols = 3
+        #         grid_data = [food_rows[i:i+cols] for i in range(0, len(food_rows), cols)]
+        #         # Eksik hücreleri doldur
+        #         for row in grid_data: 
+        #             while len(row) < cols: row.append("")
+        #         
+        #         f_table = Table(grid_data, colWidths=[5.8*cm]*cols)
+        #         f_table.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP'), ('LEFTPADDING',(0,0),(-1,-1),5), ('TOPPADDING',(0,0),(-1,-1),5)]))
+        #         elements.append(f_table)
+        #         elements.append(Spacer(1, 20))
+        # 
+        #     # --- TARİFLER VE İÇERİKLERİ ---
+        #     if shop_recipes:
+        #         elements.append(Paragraph("TARİF İÇERİKLERİ VE ÖZEL KARIŞIMLAR", self.styles['Meal_Header']))
+        #         for r_id, r_data in shop_recipes.items():
+        #             r_obj = r_data['obj']
+        #             star = "*" if r_data['is_alt'] else ""
+        #             mult = float(r_data['mult'])
+        #             
+        #             r_header = Paragraph(f"<b>{r_obj.name.upper()}</b>{star} <font size='8' color='#64748b'>({mult:g} Değişim için)</font>", self.styles['Card_Title'])
+        #             
+        #             ing_texts = []
+        #             for ing in r_obj.ingredients.all():
+        #                 i_name = ing.name
+        #                 ing_texts.append(Paragraph(f"• {i_name}", self.styles['Card_Text']))
+        #             
+        #             # Tarif kartı gibi paketle
+        #             r_ing_table = Table([[ [r_header, Spacer(1, 4)] + ing_texts ]], colWidths=[17.6*cm])
+        #             r_ing_table.setStyle(TableStyle([
+        #                 ('BACKGROUND', (0,0), (-1,-1), colors.white),
+        #                 ('BOX', (0,0), (-1,-1), 0.5, self.colors["border"]),
+        #                 ('LEFTBORDER', (0,0), (0,0), 3, self.colors["accent"]),
+        #                 ('TOPPADDING', (0,0), (-1,-1), 10),
+        #                 ('BOTTOMPADDING', (0,0), (-1,-1), 10),
+        #                 ('LEFTPADDING', (0,0), (-1,-1), 15),
+        #             ]))
+        #             elements.append(KeepTogether(r_ing_table))
+        #             elements.append(Spacer(1, 10))
+        # 
+        #     elements.append(Spacer(1, 10))
+        #     elements.append(Paragraph("<font size='7' color='#ef4444'>* Yıldız işareti ile belirtilenler alternatif öğün tercihleriniz için gerekli olanlardır.</font>", self.styles['Card_Text']))
 
         doc.build(elements, onFirstPage=self._draw_background, onLaterPages=self._draw_background)
         return buffer.getvalue()
