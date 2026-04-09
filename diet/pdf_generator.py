@@ -466,13 +466,14 @@ class DietPDFGenerator:
                             a_qty = f"{a_val:g}"
                             a_unit = "Birim" if a_val >= 1 else (a.measure_unit.name if a.measure_unit else "Birim")
                             
-                            # Alternatifin akıllı çarpım referansını ekle
+                            # Alternatifin akıllı çarpım referansını ekle - Ana besinin çarpanını da uygula (val_g * a_val)
                             a_ref_info = ""
                             if hasattr(obj, 'measure_value'):
+                                total_a_multiplier = val_g * a_val
                                 solved_a = solve_unit_value(
                                     obj.measure_value, 
                                     getattr(obj, 'measure_unit_text', '') or (obj.measure_unit.name if getattr(obj, 'measure_unit', None) else ""), 
-                                    a_val
+                                    total_a_multiplier
                                 )
                                 a_ref_info = f" [{solved_a}]"
                                 
@@ -523,16 +524,20 @@ class DietPDFGenerator:
                             a_qty = f"{a_val:g}"
                             a_unit = "Değişim" if a_val >= 1 else (a.measure_unit.name if a.measure_unit else "Birim")
                             
-                            # Alternatifin 1 porsiyon referansını da ekle (Recipe ise 'Porsiyon' varsayıyoruz)
+                            # Alternatifin akıllı çarpım referansını ekle (Tarifler için) - Ana çarpanı uygula
                             a_ref_info = ""
-                            if hasattr(obj, 'measure_value') and hasattr(obj, 'measure_unit'):
-                                r_val = float(obj.measure_value)
-                                r_unit = obj.measure_unit.name if obj.measure_unit else "Birim"
-                                r_val_str = f"{r_val:g} " if r_val != 1.0 else ""
-                                a_ref_info = f" [1 Pors. {r_val_str}{r_unit}]"
+                            total_a_recipe_multiplier = val_g * a_val
+                            
+                            if hasattr(obj, 'measure_value'):
+                                solved_a = solve_unit_value(
+                                    obj.measure_value, 
+                                    getattr(obj, 'measure_unit_text', '') or (obj.measure_unit.name if getattr(obj, 'measure_unit', None) else ""), 
+                                    total_a_recipe_multiplier
+                                )
+                                a_ref_info = f" [{solved_a}]"
                             else:
-                                # Tarifler için referans miktar genelde porsiyondur
-                                a_ref_info = f" [1 Porsiyon]"
+                                # Fallback: Sadece çarpanı yaz
+                                a_ref_info = f" [{total_a_recipe_multiplier:g} Porsiyon]"
 
                             alt_names.append(f"{obj.name}{a_ref_info} ({a_qty} {a_unit})")
                     if alt_names:
