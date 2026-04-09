@@ -34,15 +34,18 @@ def export_pdf_view(request, pk):
         pk=pk
     )
 
-    generator = DietPDFGenerator(diet_plan)
-    pdf_content = generator.generate()
+    try:
+        generator = DietPDFGenerator(diet_plan)
+        pdf_content = generator.generate()
 
-    filename = slugify(f"diyet-plani-{diet_plan.patient}") or "diyet-plani"
+        filename = slugify(f"diyet-plani-{diet_plan.patient}") or "diyet-plani"
 
-    response = HttpResponse(content_type="application/pdf")
-    response["Content-Disposition"] = f'inline; filename="{filename}.pdf"'
-    response.write(pdf_content)
-    return response
+        response = HttpResponse(content_type="application/pdf")
+        response["Content-Disposition"] = f'inline; filename="{filename}.pdf"'
+        response.write(pdf_content)
+        return response
+    except Exception as e:
+        return HttpResponse(f"PDF Oluşturma Hatası: {str(e)}", status=500)
 
 
 def get_patient_calories(request, pk):
