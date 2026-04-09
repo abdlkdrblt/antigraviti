@@ -211,8 +211,22 @@ class DietPDFGenerator:
         from reportlab.lib import colors
         from reportlab.lib.units import cm
 
+        f_reg = "DejaVu" if not getattr(self, "use_fallback_fonts", False) else "Helvetica"
+        f_bold = "DejaVu-Bold" if not getattr(self, "use_fallback_fonts", False) else "Helvetica-Bold"
+
         img = self._safe_image(r.image if r.image else None, width=6.5*cm, max_h=5*cm) or Paragraph("📷", self.styles['Card_Title'])
-        instrs = [Paragraph(line.strip(), self.styles['Instruction_Text'], bulletText="•") for line in (r.instructions or "").split(".") if line.strip()]
+        
+        # Hazırlanış metnini temizle ve maddelere böl
+        instrs = []
+        raw_instrs = (r.instructions or "").replace('\r', '').split('\n')
+        for line in raw_instrs:
+            clean_line = line.strip()
+            if clean_line:
+                # Eğer satır zaten bir sayı ile başlıyorsa (örn: "1. Şunu yap") onu temizle veya düzenle
+                import re
+                clean_line = re.sub(r'^\d+[\.\)]\s*', '', clean_line)
+                if clean_line:
+                    instrs.append(Paragraph(clean_line, self.styles['Instruction_Text'], bulletText="•"))
         
         ingredients_list = []
         for ing in r.ingredients.all():
