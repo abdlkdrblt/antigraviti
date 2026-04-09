@@ -35,7 +35,9 @@ class DonutChart(Flowable):
         self.width = 17.6 * cm
         self.height = 5 * cm
 
-    def draw(self):
+        f_reg = "DejaVu" if not getattr(self, "page_bg", None) or not hasattr(self, "canv") or not getattr(self.canv, "use_fallback", False) else "Helvetica"
+        f_bold = "DejaVu-Bold" if not getattr(self, "page_bg", None) or not hasattr(self, "canv") or not getattr(self.canv, "use_fallback", False) else "Helvetica-Bold"
+
         d = Drawing(self.width, self.height)
         pc = Pie()
         pc.x, pc.y = 0.5 * cm, 0.5 * cm
@@ -46,14 +48,14 @@ class DonutChart(Flowable):
             pc.slices[i].fillColor = color
         d.add(pc)
         d.add(Circle(pc.x + pc.width/2, pc.y + pc.height/2, 1.2*cm, fillColor=self.page_bg, strokeColor=colors.HexColor("#f1f5f9"), strokeWidth=0.5))
-        d.add(String(pc.x + pc.width/2, pc.y + pc.height/2 + 0.1*cm, f"{int(self.total_cal)}", fontName='DejaVu-Bold', fontSize=15, fillColor=colors.HexColor("#0f172a"), textAnchor='middle'))
-        d.add(String(pc.x + pc.width/2, pc.y + pc.height/2 - 0.3*cm, "TOPLAM KCAL", fontName='DejaVu', fontSize=6, fillColor=colors.HexColor("#94a3b8"), textAnchor='middle'))
+        d.add(String(pc.x + pc.width/2, pc.y + pc.height/2 + 0.1*cm, f"{int(self.total_cal)}", fontName=f_bold, fontSize=15, fillColor=colors.HexColor("#0f172a"), textAnchor='middle'))
+        d.add(String(pc.x + pc.width/2, pc.y + pc.height/2 - 0.3*cm, "TOPLAM KCAL", fontName=f_reg, fontSize=6, fillColor=colors.HexColor("#94a3b8"), textAnchor='middle'))
         
         # Lejantı sağa daha zarif yerleştir
         for i, (label, color) in enumerate(zip(self.labels, self.colors_list)):
             y = 3.5*cm - (i * 0.7*cm)
             d.add(Circle(5.2*cm, y+0.15*cm, 0.12*cm, fillColor=color, strokeColor=None))
-            d.add(String(5.6*cm, y+0.08*cm, turkish_upper(label), fontName='DejaVu', fontSize=8, fillColor=colors.HexColor("#475569")))
+            d.add(String(5.6*cm, y+0.08*cm, turkish_upper(label), fontName=f_reg, fontSize=8, fillColor=colors.HexColor("#475569")))
         d.drawOn(self.canv, 0, 0)
 
 class ProgressBar(Flowable):
@@ -64,12 +66,15 @@ class ProgressBar(Flowable):
         self.width, self.height = 7 * cm, 1 * cm
 
     def draw(self):
+        f_reg = "DejaVu" if not getattr(self.canv, "use_fallback", False) else "Helvetica"
+        f_bold = "DejaVu-Bold" if not getattr(self.canv, "use_fallback", False) else "Helvetica-Bold"
+
         # Üst metin alanı: Etiket solda, Değer sağda (Hedef silindi)
-        self.canv.setFont("DejaVu-Bold", 7.5)
+        self.canv.setFont(f_bold, 7.5)
         self.canv.setFillColor(colors.HexColor("#334155"))
         self.canv.drawString(0, 0.65*cm, turkish_upper(self.label))
         
-        self.canv.setFont("DejaVu-Bold", 8)
+        self.canv.setFont(f_bold, 8)
         self.canv.setFillColor(self.color)
         self.canv.drawRightString(self.width, 0.65*cm, f"{int(self.current)} {self.unit}")
         
@@ -99,39 +104,44 @@ class DietPDFGenerator:
 
     def _register_fonts(self):
         # Render/Linux ve Local/Windows uyumluluğu için font yollarını kontrol et
+        self.use_fallback_fonts = False
         possible_paths_reg = [
             finders.find("fonts/DejaVuSans.ttf"),
             os.path.join(settings.BASE_DIR, "static/fonts/DejaVuSans.ttf"),
             os.path.join(settings.BASE_DIR, "staticfiles/fonts/DejaVuSans.ttf"),
-            "/opt/render/project/src/static/fonts/DejaVuSans.ttf"
         ]
         possible_paths_bold = [
             finders.find("fonts/DejaVuSans-Bold.ttf"),
             os.path.join(settings.BASE_DIR, "static/fonts/DejaVuSans-Bold.ttf"),
             os.path.join(settings.BASE_DIR, "staticfiles/fonts/DejaVuSans-Bold.ttf"),
-            "/opt/render/project/src/static/fonts/DejaVuSans-Bold.ttf"
         ]
         
         f_reg = next((p for p in possible_paths_reg if p and os.path.exists(p)), None)
         f_bold = next((p for p in possible_paths_bold if p and os.path.exists(p)), None)
         
         if not f_reg or not f_bold:
-            # Kritik hata: Font bulunamazsa sistem fontlarını veya bir hata mesajını değerlendir
-            # Ancak genellikle Render'da staticfiles içinde bulunur.
-            raise FileNotFoundError("PDF fontları (DejaVuSans) sistemde bulunamadı. Lütfen static klasörünü kontrol edin.")
+            # Kritik hata yerine sistem fontlarına (Helvetica) dönerek 500 hatasını önle
+            self.use_fallback_fonts = True
+            return
 
-        pdfmetrics.registerFont(TTFont("DejaVu", f_reg))
-        pdfmetrics.registerFont(TTFont("DejaVu-Bold", f_bold))
+        try:
+            pdfmetrics.registerFont(TTFont("DejaVu", f_reg))
+            pdfmetrics.registerFont(TTFont("DejaVu-Bold", f_bold))
+        except:
+            self.use_fallback_fonts = True
 
     def _get_styles(self):
         styles = getSampleStyleSheet()
+        f_reg = "DejaVu" if not getattr(self, "use_fallback_fonts", False) else "Helvetica"
+        f_bold = "DejaVu-Bold" if not getattr(self, "use_fallback_fonts", False) else "Helvetica-Bold"
+        
         # Ünvan için büyük punto (Koyu Yeşim), İsim için küçük punto (Altın)
-        styles.add(ParagraphStyle(name='Clinic_Name', fontName='DejaVu-Bold', fontSize=26, textColor=self.colors["primary"], leading=32))
-        styles.add(ParagraphStyle(name='Clinic_Tagline', fontName='DejaVu', fontSize=12, textColor=self.colors["accent"], letterSpacing=1, leading=16))
-        styles.add(ParagraphStyle(name='Meal_Header', fontName='DejaVu-Bold', fontSize=14, textColor=self.colors["primary"], leading=18, spaceAfter=8))
-        styles.add(ParagraphStyle(name='Card_Title', fontName='DejaVu-Bold', fontSize=10, textColor=self.colors["primary"], leading=12))
-        styles.add(ParagraphStyle(name='Card_Text', fontName='DejaVu', fontSize=8.5, textColor=self.colors["text"], leading=11))
-        styles.add(ParagraphStyle(name='Instruction_Text', fontName='DejaVu', fontSize=9, textColor=self.colors["text"], leading=14, bulletFontName='DejaVu-Bold', bulletFontSize=8))
+        styles.add(ParagraphStyle(name='Clinic_Name', fontName=f_bold, fontSize=26, textColor=self.colors["primary"], leading=32))
+        styles.add(ParagraphStyle(name='Clinic_Tagline', fontName=f_reg, fontSize=12, textColor=self.colors["accent"], letterSpacing=1, leading=16))
+        styles.add(ParagraphStyle(name='Meal_Header', fontName=f_bold, fontSize=14, textColor=self.colors["primary"], leading=18, spaceAfter=8))
+        styles.add(ParagraphStyle(name='Card_Title', fontName=f_bold, fontSize=10, textColor=self.colors["primary"], leading=12))
+        styles.add(ParagraphStyle(name='Card_Text', fontName=f_reg, fontSize=8.5, textColor=self.colors["text"], leading=11))
+        styles.add(ParagraphStyle(name='Instruction_Text', fontName=f_reg, fontSize=9, textColor=self.colors["text"], leading=14, bulletFontName=f_bold, bulletFontSize=8))
         return styles
 
     def _safe_image(self, path, width=3*cm, max_h=None):
@@ -155,13 +165,16 @@ class DietPDFGenerator:
         footer_text = "İnstagram Sayfamı Keşfet"
         footer_url = "https://www.instagram.com/diyetisyenaylinbalkan"
         
+        f_reg = "DejaVu" if not getattr(canvas, "use_fallback", False) else "Helvetica"
+        f_bold = "DejaVu-Bold" if not getattr(canvas, "use_fallback", False) else "Helvetica-Bold"
+
         # Yazı Stili (DejaVu-Bold ve Altın Vurgu)
-        canvas.setFont("DejaVu-Bold", 7.5)
+        canvas.setFont(f_bold, 7.5)
         canvas.setFillColor(self.colors["accent"])
         canvas.drawCentredString(A4[0]/2, 1.2*cm, footer_text)
         
         # Alt Çizgi (Link olduğu daha net anlaşılsın)
-        t_width = canvas.stringWidth(footer_text, "DejaVu-Bold", 7.5)
+        t_width = canvas.stringWidth(footer_text, f_bold, 7.5)
         canvas.setStrokeColor(self.colors["accent"])
         canvas.setLineWidth(0.5)
         canvas.line(A4[0]/2 - t_width/2, 1.14*cm, A4[0]/2 + t_width/2, 1.14*cm)
@@ -169,7 +182,7 @@ class DietPDFGenerator:
         # Link alanı tanımlaması
         canvas.linkURL(footer_url, (A4[0]/2 - t_width/2, 0.9*cm, A4[0]/2 + t_width/2, 1.6*cm), relative=0)
         
-        canvas.setFont("DejaVu", 7.5); canvas.setFillColor(self.colors["text_muted"])
+        canvas.setFont(f_reg, 7.5); canvas.setFillColor(self.colors["text_muted"])
         canvas.drawString(1.7*cm, 1.2*cm, f"Sayfa {doc.page}")
         canvas.restoreState()
 
