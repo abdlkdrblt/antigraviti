@@ -98,8 +98,28 @@ class DietPDFGenerator:
         self.styles = self._get_styles()
 
     def _register_fonts(self):
-        f_reg = finders.find("fonts/DejaVuSans.ttf") or os.path.join(settings.BASE_DIR, "static/fonts/DejaVuSans.ttf")
-        f_bold = finders.find("fonts/DejaVuSans-Bold.ttf") or os.path.join(settings.BASE_DIR, "static/fonts/DejaVuSans-Bold.ttf")
+        # Render/Linux ve Local/Windows uyumluluğu için font yollarını kontrol et
+        possible_paths_reg = [
+            finders.find("fonts/DejaVuSans.ttf"),
+            os.path.join(settings.BASE_DIR, "static/fonts/DejaVuSans.ttf"),
+            os.path.join(settings.BASE_DIR, "staticfiles/fonts/DejaVuSans.ttf"),
+            "/opt/render/project/src/static/fonts/DejaVuSans.ttf"
+        ]
+        possible_paths_bold = [
+            finders.find("fonts/DejaVuSans-Bold.ttf"),
+            os.path.join(settings.BASE_DIR, "static/fonts/DejaVuSans-Bold.ttf"),
+            os.path.join(settings.BASE_DIR, "staticfiles/fonts/DejaVuSans-Bold.ttf"),
+            "/opt/render/project/src/static/fonts/DejaVuSans-Bold.ttf"
+        ]
+        
+        f_reg = next((p for p in possible_paths_reg if p and os.path.exists(p)), None)
+        f_bold = next((p for p in possible_paths_bold if p and os.path.exists(p)), None)
+        
+        if not f_reg or not f_bold:
+            # Kritik hata: Font bulunamazsa sistem fontlarını veya bir hata mesajını değerlendir
+            # Ancak genellikle Render'da staticfiles içinde bulunur.
+            raise FileNotFoundError("PDF fontları (DejaVuSans) sistemde bulunamadı. Lütfen static klasörünü kontrol edin.")
+
         pdfmetrics.registerFont(TTFont("DejaVu", f_reg))
         pdfmetrics.registerFont(TTFont("DejaVu-Bold", f_bold))
 
