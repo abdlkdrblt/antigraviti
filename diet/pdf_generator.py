@@ -411,18 +411,17 @@ class DietPDFGenerator:
                 unit_label = "Ölçü" if val_g >= 1 else (mf.measure_unit.name if mf.measure_unit else 'Birim')
                 p_text = f"{val_g:g} {unit_label}"
                 
-                # 1 Porsiyon Referans Bilgisi
+                # 1 Porsiyon Referans Bilgisi -> Otomatik Çarpım Mantığı
                 ref_info = ""
                 if mf.food:
                     f_ref_val = float(mf.food.measure_value)
                     f_ref_unit = mf.food.measure_unit.name if mf.food.measure_unit else "Birim"
-                    # Eğer miktar 1 ise gösterme, sadece birimi yaz
-                    f_val_str = f"{f_ref_val:g} " if f_ref_val != 1.0 else ""
-                    ref_info = f" <font color='#6b7280' size='8'>(1 Porsiyonu: {f_val_str}{f_ref_unit})</font>"
+                    
+                    # Çarpma işlemi: Diyetteki miktar * Besindeki birim miktarı
+                    total_val = val_g * f_ref_val
+                    ref_info = f" <font color='#6b7280' size='8'>({total_val:g} {f_ref_unit})</font>"
 
-                multiplier_note = ""
-                if val_g > 1:
-                    multiplier_note = f"<br/><br/><font color='#1A3C34'><b>HATIRLATMA:</b> <i>{val_g:g} ölçü porsiyon miktarının {val_g:g} katıdır.</i></font>"
+                multiplier_note = "" # Hatırlatma satırı kaldırıldı
 
                 f_name = mf.food.name if mf.food else "Besin"
                 cals = (mf.food.calories * q) if mf.food else 0
@@ -439,13 +438,15 @@ class DietPDFGenerator:
                             a_qty = f"{a_val:g}"
                             a_unit = "Birim" if a_val >= 1 else (a.measure_unit.name if a.measure_unit else "Birim")
                             
-                            # Alternatifin 1 porsiyon referansını da ekle
+                            # Alternatifin otomatik çarpım referansını ekle
                             a_ref_info = ""
                             if hasattr(obj, 'measure_value') and hasattr(obj, 'measure_unit'):
                                 r_val = float(obj.measure_value)
                                 r_unit = obj.measure_unit.name if obj.measure_unit else "Birim"
-                                r_val_str = f"{r_val:g} " if r_val != 1.0 else ""
-                                a_ref_info = f" [1 Pors. {r_val_str}{r_unit}]"
+                                
+                                # Alternatif Miktarı * Alternatif Birim Değeri
+                                total_a_val = a_val * r_val
+                                a_ref_info = f" [{total_a_val:g} {r_unit}]"
                                 
                             alt_names.append(f"{obj.name}{a_ref_info} ({a_qty} {a_unit})")
                     if alt_names:
@@ -472,22 +473,19 @@ class DietPDFGenerator:
                 
                 # 'Porsiyon' -> 'Değişim' dönüşümü ve porsiyon notu
                 val_g = float(mr.measure_value or 1)
-                unit_label = "Değişim" if val_g >= 1 else (mr.measure_unit.name if mr.measure_unit else 'Porsiyon')
-                p_text = f"{val_g:g} {unit_label}"
                 
-                # 1 Porsiyon Referans Bilgisi (Tarif için)
+                # 1 Porsiyon Referans Bilgisi (Tarif için) -> Otomatik Çarpım Mantığı
                 ref_info = ""
                 if r:
                     r_ref_val = float(r.measure_value)
                     r_ref_unit = r.measure_unit.name if r.measure_unit else "Porsiyon"
-                    # Eğer miktar 1 ise gösterme, sadece birimi yaz
-                    r_val_str = f"{r_ref_val:g} " if r_ref_val != 1.0 else ""
-                    ref_info = f" <font color='#6b7280' size='8'>(1 Porsiyonu: {r_val_str}{r_ref_unit})</font>"
+                    
+                    # Çarpma işlemi: Diyetteki miktar * Tarifteki birim miktarı
+                    total_r_val = val_g * r_ref_val
+                    ref_info = f" <font color='#6b7280' size='8'>({total_r_val:g} {r_ref_unit})</font>"
                 
                 multiplier_note = ""
-                if val_g > 1:
-                    multiplier_note = f"<br/><br/><font color='#1A3C34'><b>HATIRLATMA:</b> <i>{val_g:g} değişim porsiyon miktarının {val_g:g} katıdır.</i></font>"
-
+                
                 # ALTERNATİFLERİ TOPLA
                 alts = list(mr.alternatives.all())
                 alt_text = ""
