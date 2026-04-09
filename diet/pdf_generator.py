@@ -466,14 +466,13 @@ class DietPDFGenerator:
                             a_qty = f"{a_val:g}"
                             a_unit = "Birim" if a_val >= 1 else (a.measure_unit.name if a.measure_unit else "Birim")
                             
-                            # Alternatifin akıllı çarpım referansını ekle - Ana besinin çarpanını da uygula (val_g * a_val)
+                            # Alternatifin akıllı çarpımını ekle - Ana besin çarpanını (val_g) KALDIRDIK
                             a_ref_info = ""
                             if hasattr(obj, 'measure_value'):
-                                total_a_multiplier = val_g * a_val
                                 solved_a = solve_unit_value(
                                     obj.measure_value, 
                                     getattr(obj, 'measure_unit_text', '') or (obj.measure_unit.name if getattr(obj, 'measure_unit', None) else ""), 
-                                    total_a_multiplier
+                                    a_val
                                 )
                                 a_ref_info = f" [{solved_a}]"
                                 
@@ -524,20 +523,18 @@ class DietPDFGenerator:
                             a_qty = f"{a_val:g}"
                             a_unit = "Değişim" if a_val >= 1 else (a.measure_unit.name if a.measure_unit else "Birim")
                             
-                            # Alternatifin akıllı çarpım referansını ekle (Tarifler için) - Ana çarpanı uygula
+                            # Alternatifin akıllı çarpımını ekle (Tarifler için) - Ana çarpanı KALDIRDIK
                             a_ref_info = ""
-                            total_a_recipe_multiplier = val_g * a_val
-                            
                             if hasattr(obj, 'measure_value'):
                                 solved_a = solve_unit_value(
                                     obj.measure_value, 
                                     getattr(obj, 'measure_unit_text', '') or (obj.measure_unit.name if getattr(obj, 'measure_unit', None) else ""), 
-                                    total_a_recipe_multiplier
+                                    a_val
                                 )
                                 a_ref_info = f" [{solved_a}]"
                             else:
-                                # Fallback: Sadece çarpanı yaz
-                                a_ref_info = f" [{total_a_recipe_multiplier:g} Porsiyon]"
+                                # Fallback: Sadece kendi çarpanını yaz
+                                a_ref_info = f" [{a_val:g} Porsiyon]"
 
                             alt_names.append(f"{obj.name}{a_ref_info}")
                     if alt_names:
