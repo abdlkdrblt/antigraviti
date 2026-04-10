@@ -138,17 +138,17 @@
         transition: background-color 0.3s ease;
     }
 
-    /* Öğün Tipine Göre Dinamik Renkler */
-    .meal-header-0_UYANINCA { background-color: #6366f1 !important; } /* İndigo */
-    .meal-header-1_KAHVALTI { background-color: #059669 !important; } /* Yeşil */
-    .meal-header-2_KAH_SONRASI { background-color: #0ea5e9 !important; } /* Açık Mavi */
-    .meal-header-3_OGLE_ONCESI { background-color: #0d9488 !important; } /* Turkuaz */
-    .meal-header-4_OGLE { background-color: #d97706 !important; } /* Koyu Sarı/Amber */
-    .meal-header-5_OGLE_SONRASI { background-color: #ea580c !important; } /* Turuncu */
-    .meal-header-6_AKSAM_ONCESI { background-color: #db2777 !important; } /* Pembe */
-    .meal-header-7_AKSAM { background-color: #dc2626 !important; } /* Kırmızı */
-    .meal-header-8_AKSAM_SONRASI { background-color: #7c3aed !important; } /* Mor/Violet */
-    .meal-header-9_GECE { background-color: #1e293b !important; } /* Koyu Gri */
+    /* Öğün Tipine Göre Dinamik Renkler (Specificity artırıldı) */
+    #meals-group .djn-item > h3.meal-header-0_UYANINCA { background-color: #6366f1 !important; } 
+    #meals-group .djn-item > h3.meal-header-1_KAHVALTI { background-color: #059669 !important; } 
+    #meals-group .djn-item > h3.meal-header-2_KAH_SONRASI { background-color: #0ea5e9 !important; } 
+    #meals-group .djn-item > h3.meal-header-3_OGLE_ONCESI { background-color: #0d9488 !important; } 
+    #meals-group .djn-item > h3.meal-header-4_OGLE { background-color: #d97706 !important; } 
+    #meals-group .djn-item > h3.meal-header-5_OGLE_SONRASI { background-color: #ea580c !important; } 
+    #meals-group .djn-item > h3.meal-header-6_AKSAM_ONCESI { background-color: #db2777 !important; } 
+    #meals-group .djn-item > h3.meal-header-7_AKSAM { background-color: #dc2626 !important; } 
+    #meals-group .djn-item > h3.meal-header-8_AKSAM_SONRASI { background-color: #7c3aed !important; } 
+    #meals-group .djn-item > h3.meal-header-9_GECE { background-color: #1e293b !important; }
     
     /* İpucu metni dizaynı */
     .toggle-hint {
@@ -236,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     let customLabel = h.querySelector('.custom-meal-title');
                     
                     // Önceki renk sınıflarını temizle
-                    h.classList.forEach(cls => {
+                    Array.from(h.classList).forEach(cls => {
                         if (cls.startsWith('meal-header-')) h.classList.remove(cls);
                     });
 
