@@ -148,7 +148,7 @@ class RecipeIngredientInline(admin.TabularInline):
     model = RecipeIngredient
     form = MeasureUnitManualForm
     extra = 0
-    fields = ["name", "measure_value", "measure_unit_text"]
+    fields = ["name"] # Diğer alanlar kalabalık etmesin diye gizlendi (measure_value, measure_unit_text vb.)
 
 
 class RecipePortionInline(admin.TabularInline):
@@ -173,6 +173,9 @@ class RecipeAdmin(admin.ModelAdmin):
         "protein",
         "fat"
     ]
+
+    class Media:
+        js = ("diet/js/recipe_macro_calc.js",)
 
 
 class MealAlternativeInline(nested_admin.NestedTabularInline):
