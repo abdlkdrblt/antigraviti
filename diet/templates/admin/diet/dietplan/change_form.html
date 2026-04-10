@@ -123,10 +123,10 @@
         margin-bottom: 10px;
     }
 
-    /* Tekil Öğün Başlıkları (Öğün 1, Öğün 2 vb.) */
+    /* Tekil Öğün Başlıkları (Varsayılan Mor) */
     #meals-group .djn-item > h3,
     #meals-group .inline-related > h3 {
-        background-color: #8b5cf6 !important; /* Mor */
+        background-color: #64748b !important; /* Varsayılan Gri */
         color: white !important;
         border-radius: 4px;
         padding: 8px 12px;
@@ -135,7 +135,20 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        transition: background-color 0.3s ease;
     }
+
+    /* Öğün Tipine Göre Dinamik Renkler */
+    .meal-header-0_UYANINCA { background-color: #6366f1 !important; } /* İndigo */
+    .meal-header-1_KAHVALTI { background-color: #059669 !important; } /* Yeşil */
+    .meal-header-2_KAH_SONRASI { background-color: #0ea5e9 !important; } /* Açık Mavi */
+    .meal-header-3_OGLE_ONCESI { background-color: #0d9488 !important; } /* Turkuaz */
+    .meal-header-4_OGLE { background-color: #d97706 !important; } /* Koyu Sarı/Amber */
+    .meal-header-5_OGLE_SONRASI { background-color: #ea580c !important; } /* Turuncu */
+    .meal-header-6_AKSAM_ONCESI { background-color: #db2777 !important; } /* Pembe */
+    .meal-header-7_AKSAM { background-color: #dc2626 !important; } /* Kırmızı */
+    .meal-header-8_AKSAM_SONRASI { background-color: #7c3aed !important; } /* Mor/Violet */
+    .meal-header-9_GECE { background-color: #1e293b !important; } /* Koyu Gri */
     
     /* İpucu metni dizaynı */
     .toggle-hint {
@@ -217,11 +230,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 const updateTitle = () => {
                     const option = selectBox.options[selectBox.selectedIndex];
                     const selectedText = option ? option.text : '';
+                    const selectedValue = selectBox.value;
                     
                     const inlineLabel = h.querySelector('.inline_label');
                     let customLabel = h.querySelector('.custom-meal-title');
                     
-                    if (selectBox.value && selectedText && selectedText.trim() !== '') {
+                    // Önceki renk sınıflarını temizle
+                    h.classList.forEach(cls => {
+                        if (cls.startsWith('meal-header-')) h.classList.remove(cls);
+                    });
+
+                    if (selectedValue && selectedText && selectedValue.trim() !== '') {
+                        // Yeni renk sınıfını ekle
+                        h.classList.add('meal-header-' + selectedValue);
+
                         if (!customLabel) {
                             customLabel = document.createElement('span');
                             customLabel.className = 'custom-meal-title';
